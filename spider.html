@@ -1,153 +1,186 @@
-<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spider-Man Game</title>
+<title>Simon Says</title>
 <style>
     body {
-        font-family: Arial, sans-serif;
         margin: 0;
         padding: 0;
-        overflow: hidden;
+        background-color: #f5f5f5;
+        font-family: Arial, sans-serif;
     }
     #game-container {
-        width: 100vw;
-        height: 100vh;
-        background-color: #000;
-        position: relative;
-    }
-    .building {
-        width: 100px;
+        display: flex;
+        flex-wrap: wrap;
+        width: 300px;
         height: 300px;
-        background-color: #666;
-        position: absolute;
-        bottom: 0;
+        border: 2px solid #333;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        margin: 0 auto;
     }
-    .spider-man {
-        width: 50px;
-        height: 50px;
-        background-color: red;
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
+    .button {
+        width: 50%;
+        height: 50%;
+        cursor: pointer;
+        transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
     }
-    .item {
-        width: 20px;
-        height: 20px;
-        background-color: yellow;
-        position: absolute;
-        bottom: 0;
+    .button:hover {
+        filter: brightness(0.8);
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     }
-    .obstacle {
-        width: 40px;
-        height: 40px;
-        background-color: orange;
-        position: absolute;
-        bottom: 0;
+    .green { background-color: #4CAF50; }
+    .red { background-color: #F44336; }
+    .yellow { background-color: #FFEB3B; }
+    .blue { background-color: #2196F3; }
+    #info {
+        text-align: center;
+        font-size: 24px;
+        margin-top: 20px;
     }
     #score {
-        color: white;
+        text-align: center;
         font-size: 24px;
-        position: absolute;
-        top: 20px;
-        left: 20px;
+        margin-top: 10px;
+    }
+    #reset-button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        background-color: #333;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+    }
+    #reset-button:hover {
+        background-color: #555;
     }
 </style>
 </head>
 <body>
 
 <div id="game-container">
-    <!-- Criação dos prédios -->
-    <div class="building" style="left: 20%;"></div>
-    <div class="building" style="left: 40%;"></div>
-    <div class="building" style="left: 60%;"></div>
-    <div class="building" style="left: 80%;"></div>
-
-    <!-- Homem-Aranha -->
-    <div class="spider-man"></div>
-
-    <!-- Itens -->
-    <div class="item" style="left: 25%;"></div>
-    <div class="item" style="left: 45%;"></div>
-    <div class="item" style="left: 65%;"></div>
-    <div class="item" style="left: 85%;"></div>
-
-    <!-- Obstáculos -->
-    <div class="obstacle" style="left: 30%;"></div>
-    <div class="obstacle" style="left: 50%;"></div>
-    <div class="obstacle" style="left: 70%;"></div>
+    <div class="button green" onclick="handleButtonClick(this, 'green')"></div>
+    <div class="button red" onclick="handleButtonClick(this, 'red')"></div>
+    <div class="button yellow" onclick="handleButtonClick(this, 'yellow')"></div>
+    <div class="button blue" onclick="handleButtonClick(this, 'blue')"></div>
 </div>
 
-<div id="score">Score: <span id="score-value">0</span></div>
+<div id="info">Pronto para começar!</div>
+<div id="score">Pontuação: 0</div>
+<button id="reset-button" onclick="resetGame()">Reiniciar</button>
 
 <script>
-    // Variáveis de jogo
+    const colors = ['green', 'red', 'yellow', 'blue'];
+    const gameSequence = [];
+    let playerSequence = [];
+    let round = 1;
     let score = 0;
+    let gameIsOver = false;
 
-    // Movimento do Homem-Aranha
-    document.addEventListener('keydown', function(event) {
-        const spiderMan = document.querySelector('.spider-man');
-        const position = parseInt(spiderMan.style.left) || 50;
-        const stepSize = 5; // Tamanho do passo
-
-        if (event.key === 'ArrowLeft') {
-            spiderMan.style.left = Math.max(position - stepSize, 0) + '%';
-        } else if (event.key === 'ArrowRight') {
-            spiderMan.style.left = Math.min(position + stepSize, 100) + '%';
-        } else if (event.key === ' ') {
-            jump();
-        }
-    });
-
-    // Pulo do Homem-Aranha
-    function jump() {
-        const spiderMan = document.querySelector('.spider-man');
-        const jumpHeight = 100;
-        const originalPosition = parseInt(spiderMan.style.bottom) || 0;
-        const finalPosition = originalPosition + jumpHeight;
-        const jumpDuration = 500; // ms
-
-        spiderMan.style.transition = `bottom ${jumpDuration / 1000}s ease-in-out`;
-        spiderMan.style.bottom = `${finalPosition}px`;
-
+    function handleButtonClick(button, color) {
+        if (gameIsOver) return;
+        
+        playerSequence.push(color);
+        checkSequence();
+        
+        button.style.backgroundColor = lightenColor(color);
         setTimeout(() => {
-            spiderMan.style.transition = '';
-            spiderMan.style.bottom = `${originalPosition}px`;
-        }, jumpDuration);
+            button.style.backgroundColor = color;
+        }, 200);
+    }
+    
+    function lightenColor(color) {
+        const rgb = colorToRGB(color);
+        const r = Math.min(rgb.r + 50, 255);
+        const g = Math.min(rgb.g + 50, 255);
+        const b = Math.min(rgb.b + 50, 255);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+    
+    function colorToRGB(color) {
+        const hex = color.substring(1);
+        const bigint = parseInt(hex, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return { r, g, b };
     }
 
-    // Colisão do Homem-Aranha com itens
-    function checkCollision() {
-        const spiderMan = document.querySelector('.spider-man');
-        const items = document.querySelectorAll('.item');
+    function generateSequence() {
+        gameSequence.length = 0;
+        playerSequence.length = 0;
 
-        items.forEach(item => {
-            if (isColliding(spiderMan, item)) {
-                item.remove();
-                score++;
-                document.getElementById('score-value').innerText = score;
+        for (let i = 0; i < round; i++) {
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            gameSequence.push(randomColor);
+        }
+        showSequence();
+    }
+
+    function showSequence() {
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i >= gameSequence.length) {
+                clearInterval(interval);
+                playerSequence.length = 0;
+            } else {
+                const button = document.querySelector(`.${gameSequence[i]}`);
+                button.style.opacity = 0.5;
+                playSound(gameSequence[i]);
+                setTimeout(() => {
+                    button.style.opacity = 1;
+                }, 300);
             }
-        });
+            i++;
+        }, 1000 * (1 + round * 0.1)); // Aumentando a velocidade com base no nível
     }
 
-    // Verifica se dois elementos estão colidindo
-    function isColliding(element1, element2) {
-        const rect1 = element1.getBoundingClientRect();
-        const rect2 = element2.getBoundingClientRect();
-
-        return !(
-            rect1.right < rect2.left ||
-            rect1.left > rect2.right ||
-            rect1.bottom < rect2.top ||
-            rect1.top > rect2.bottom
-        );
+    function playSound(color) {
+        const audio = new Audio(`${color}.mp3`);
+        audio.play();
     }
 
-    // Verifica colisões periodicamente
-    setInterval(checkCollision, 100);
+    function checkSequence() {
+        const isEqual = playerSequence.every((value, index) => value === gameSequence[index]);
+
+        if (!isEqual) {
+            gameOver();
+            return;
+        }
+
+        if (playerSequence.length === gameSequence.length) {
+            score += round * 10;
+            document.getElementById('score').innerText = `Pontuação: ${score}`;
+            round++;
+            document.getElementById('info').innerText = `Fase ${round}`;
+            setTimeout(() => {
+                generateSequence();
+            }, 1000);
+        }
+    }
+
+    function gameOver() {
+        gameIsOver = true;
+        document.getElementById('info').innerText = `Fim de jogo! Sua pontuação foi: ${score}.`;
+    }
+
+    function resetGame() {
+        round = 1;
+        score = 0;
+        gameIsOver = false;
+        document.getElementById('info').innerText = `Pronto para começar!`;
+        document.getElementById('score').innerText = `Pontuação: 0`;
+        generateSequence();
+    }
+
+    generateSequence();
 </script>
 
 </body>
 </html>
+
